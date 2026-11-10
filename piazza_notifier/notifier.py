@@ -17,7 +17,7 @@ EMAIL = os.environ["PIAZZA_EMAIL"]
 PASSWORD = os.environ["PIAZZA_PASSWORD"]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]  # long random string = your private channel
 NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh")
-INTERVAL = int(os.environ.get("POLL_SECONDS", "60"))
+INTERVAL = int(os.environ.get("POLL_SECONDS", "1800"))
 FEED_LIMIT = int(os.environ.get("FEED_LIMIT", "50"))
 # Optional: comma-separated class network ids to watch. Default: all enrolled.
 ONLY = {x.strip() for x in os.environ.get("PIAZZA_NETWORK_IDS", "").split(",") if x.strip()}

@@ -19,5 +19,5 @@ Needs an always-on machine (Raspberry Pi, VPS, home server). Example systemd/`no
 
 ## Notes
 - Piazza has no official API. `piazza-api` is unofficial and logs in with your password, so keep `.env` private (it's git-ignored). If you use Google/SSO login, set a Piazza password first.
-- Latency is up to `POLL_SECONDS` (default 60s). Don't poll much faster to avoid being rate-limited.
+- Latency is up to `POLL_SECONDS` (default 1800s = 30 min).
 - Anyone who knows your topic name can read notifications; use a long random one (or self-host ntfy).
