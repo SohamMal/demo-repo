@@ -21,3 +21,8 @@ Needs an always-on machine (Raspberry Pi, VPS, home server). Example systemd/`no
 - Piazza has no official API. `piazza-api` is unofficial and logs in with your password, so keep `.env` private (it's git-ignored). If you use Google/SSO login, set a Piazza password first.
 - Latency is up to `POLL_SECONDS` (default 1800s = 30 min).
 - Anyone who knows your topic name can read notifications; use a long random one (or self-host ntfy).
+
+## Quiet hours
+By default it pauses from 23:00 to 06:00 (`QUIET_START`/`QUIET_END`, in `TIMEZONE`,
+an IANA name like `Asia/Kolkata`). Set `TIMEZONE` or it uses the machine's clock.
+Posts made overnight are sent as notifications at the first check after 06:00.

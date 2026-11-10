@@ -8,6 +8,8 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import requests
@@ -21,6 +23,11 @@ INTERVAL = int(os.environ.get("POLL_SECONDS", "1800"))
 FEED_LIMIT = int(os.environ.get("FEED_LIMIT", "50"))
 # Optional: comma-separated class network ids to watch. Default: all enrolled.
 ONLY = {x.strip() for x in os.environ.get("PIAZZA_NETWORK_IDS", "").split(",") if x.strip()}
+# Quiet hours: no polling from QUIET_START to QUIET_END (24h clock, in TIMEZONE).
+# Anything posted overnight is caught by the first check after QUIET_END.
+QUIET_START = int(os.environ.get("QUIET_START", "23"))
+QUIET_END = int(os.environ.get("QUIET_END", "6"))
+TZ = ZoneInfo(os.environ["TIMEZONE"]) if os.environ.get("TIMEZONE") else None
 STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
 
 
@@ -76,12 +83,35 @@ def check(p, state, first_run):
             print(f"notified: {label} {kind} @{item.get('nr')} {subject}", flush=True)
 
 
+def in_quiet_hours():
+    h = datetime.now(TZ).hour
+    if QUIET_START == QUIET_END:
+        return False
+    if QUIET_START < QUIET_END:
+        return QUIET_START <= h < QUIET_END
+    return h >= QUIET_START or h < QUIET_END  # wraps past midnight
+
+
+def seconds_until_quiet_end():
+    now = datetime.now(TZ)
+    end = now.replace(hour=QUIET_END, minute=0, second=0, microsecond=0)
+    if end <= now:
+        end += timedelta(days=1)
+    return max(60, int((end - now).total_seconds()))
+
+
 def main():
     state = load_state()
     first_run = state is None
     state = state or {}
     p = login()
     while True:
+        if in_quiet_hours():
+            wait = seconds_until_quiet_end()
+            print(f"quiet hours, sleeping {wait}s", flush=True)
+            time.sleep(wait)
+            p = login()  # session may have expired overnight
+            continue
         try:
             check(p, state, first_run)
             save_state(state)
