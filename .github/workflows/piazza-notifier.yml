@@ -1,0 +1,70 @@
+name: Piazza notifier
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 min (GitHub may delay runs by a few minutes)
+  workflow_dispatch: {}       # lets you run it manually from the Actions tab
+
+concurrency:
+  group: piazza-notifier
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TIMEZONE: ${{ vars.TIMEZONE || 'UTC' }}
+      QUIET_START: ${{ vars.QUIET_START || '23' }}
+      QUIET_END: ${{ vars.QUIET_END || '6' }}
+    steps:
+      - name: Quiet hours?
+        id: quiet
+        run: |
+          python3 - >> "$GITHUB_OUTPUT" <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          h = datetime.now(ZoneInfo(os.environ["TIMEZONE"])).hour
+          s, e = int(os.environ["QUIET_START"]), int(os.environ["QUIET_END"])
+          quiet = (s <= h < e) if s < e else (h >= s or h < e) if s != e else False
+          print("quiet=" + str(quiet).lower())
+          PY
+
+      - uses: actions/checkout@v4
+        if: steps.quiet.outputs.quiet != 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.quiet.outputs.quiet != 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: piazza_notifier/requirements.txt
+
+      - run: pip install -r piazza_notifier/requirements.txt
+        if: steps.quiet.outputs.quiet != 'true'
+
+      # Remember which posts we've already notified about between runs
+      - uses: actions/cache/restore@v4
+        if: steps.quiet.outputs.quiet != 'true'
+        with:
+          path: piazza_notifier/state.json
+          key: piazza-state-${{ github.run_id }}
+          restore-keys: piazza-state-
+
+      - name: Check Piazza and notify
+        if: steps.quiet.outputs.quiet != 'true'
+        working-directory: piazza_notifier
+        env:
+          ONCE: "1"
+          PIAZZA_EMAIL: ${{ secrets.PIAZZA_EMAIL }}
+          PIAZZA_PASSWORD: ${{ secrets.PIAZZA_PASSWORD }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          PIAZZA_NETWORK_IDS: ${{ vars.PIAZZA_NETWORK_IDS }}
+        run: python notifier.py
+
+      - uses: actions/cache/save@v4
+        if: steps.quiet.outputs.quiet != 'true' && success()
+        with:
+          path: piazza_notifier/state.json
+          key: piazza-state-${{ github.run_id }}

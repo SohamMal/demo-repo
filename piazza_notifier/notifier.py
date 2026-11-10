@@ -104,6 +104,13 @@ def main():
     state = load_state()
     first_run = state is None
     state = state or {}
+    if os.environ.get("ONCE"):  # single check then exit (for cron / GitHub Actions)
+        if in_quiet_hours():
+            print("quiet hours, skipping", flush=True)
+            return
+        check(login(), state, first_run)
+        save_state(state)
+        return
     p = login()
     while True:
         if in_quiet_hours():

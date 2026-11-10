@@ -26,3 +26,15 @@ Needs an always-on machine (Raspberry Pi, VPS, home server). Example systemd/`no
 By default it pauses from 23:00 to 06:00 (`QUIET_START`/`QUIET_END`, in `TIMEZONE`,
 an IANA name like `Asia/Kolkata`). Set `TIMEZONE` or it uses the machine's clock.
 Posts made overnight are sent as notifications at the first check after 06:00.
+
+## Run on GitHub Actions (no server)
+`.github/workflows/piazza-notifier.yml` runs the check every 30 minutes and exits
+(`ONCE=1`). It must be on the repo's **default branch** to be scheduled.
+
+Repo → Settings → Secrets and variables → Actions:
+- **Secrets:** `PIAZZA_EMAIL`, `PIAZZA_PASSWORD`, `NTFY_TOPIC`
+- **Variables:** `TIMEZONE` (e.g. `Asia/Kolkata`; defaults to UTC), optional `QUIET_START`, `QUIET_END`, `PIAZZA_NETWORK_IDS`
+
+Then Actions tab → "Piazza notifier" → Run workflow once to seed the state (first run is silent).
+Seen-post state is kept in the Actions cache between runs. GitHub disables scheduled
+workflows on public repos after 60 days without repo activity; re-enable it if that happens.
